@@ -1,12 +1,13 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { enhanceBio, type EnhanceBioOutput } from '@/ai/flows/enhance-bio';
 import { enhanceAppDescription, type EnhanceAppDescriptionOutput } from '@/ai/flows/enhance-app-description';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apps as initialApps, tools as initialTools, type AppTool } from '@/data/apps-and-tools';
+import { getStoredApps, getStoredTools } from '@/lib/storage'; // Import storage functions
+import { type AppTool } from '@/data/apps-and-tools'; // Import only the type
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -23,7 +24,8 @@ const renderIcon = (iconIdentifier: string | React.ReactNode | undefined, classN
   }
   if (typeof iconIdentifier === 'string') {
     const IconComponent = (LucideIcons as any)[iconIdentifier];
-    return IconComponent ? <IconComponent className={combinedClassName} aria-label={`${iconIdentifier} icon`} /> : <LucideIcons.AppWindow className={combinedClassName} aria-label="Default App Icon" />;
+    // Ensure the icon name exists in LucideIcons before rendering
+    return IconComponent ? <IconComponent className={combinedClassName} aria-label={`${iconIdentifier} icon`} /> : <LucideIcons.AppWindow className={combinedClassName} aria-label="Default App Icon (Invalid Name)" />;
   }
   // If it's already a ReactNode (like an inline SVG), render it directly
   return React.isValidElement(iconIdentifier) ? React.cloneElement(iconIdentifier as React.ReactElement, { className: combinedClassName }) : <LucideIcons.AppWindow className={combinedClassName} aria-label="Default App Icon" />;
@@ -32,7 +34,7 @@ const renderIcon = (iconIdentifier: string | React.ReactNode | undefined, classN
 
 interface EnhancedAppTool extends AppTool {
   enhancedDescription?: string;
-  isLoadingDescription?: boolean;
+  isLoadingDescription: boolean; // Always include loading state initially
   errorDescription?: string | null;
 }
 
@@ -40,8 +42,20 @@ export default function Home() {
   const [enhancedBio, setEnhancedBio] = useState<string | null>(null);
   const [isLoadingBio, setIsLoadingBio] = useState(true);
   const [errorBio, setErrorBio] = useState<string | null>(null);
-  const [enhancedApps, setEnhancedApps] = useState<EnhancedAppTool[]>(initialApps.map(app => ({ ...app, isLoadingDescription: true })));
-  const [enhancedTools, setEnhancedTools] = useState<EnhancedAppTool[]>(initialTools.map(tool => ({ ...tool, isLoadingDescription: true }))); // Tools descriptions need loading state too
+  const [apps, setApps] = useState<EnhancedAppTool[]>([]);
+  const [tools, setTools] = useState<EnhancedAppTool[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true); // Loading state for initial data fetch
+
+  // Fetch initial apps and tools from storage (client-side)
+  useEffect(() => {
+    const storedApps = getStoredApps();
+    const storedTools = getStoredTools();
+
+    setApps(storedApps.map(app => ({ ...app, isLoadingDescription: true, errorDescription: null })));
+    setTools(storedTools.map(tool => ({ ...tool, isLoadingDescription: true, errorDescription: null })));
+    setIsLoadingData(false); // Mark initial data loading as complete
+  }, []);
+
 
   // Fetch enhanced bio
   useEffect(() => {
@@ -64,35 +78,55 @@ export default function Home() {
     fetchEnhancedBio();
   }, []);
 
-  // Fetch enhanced descriptions for apps and tools
-  useEffect(() => {
-    async function fetchAllDescriptions<T extends EnhancedAppTool>(
+   // Fetch enhanced descriptions for apps and tools *after* initial data is loaded
+   const enhanceDescriptions = useCallback(async <T extends EnhancedAppTool>(
       items: T[],
       setItems: React.Dispatch<React.SetStateAction<T[]>>
-    ) {
-      const promises = items.map(async (item) => {
-        if (!item.isLoadingDescription) return item; // Skip if already fetched or not needed
+    ) => {
+        // Create promises only for items that haven't been processed yet
+        const promises = items.map(async (item) => {
+            // Check if enhancement is needed (isLoading is true)
+            if (!item.isLoadingDescription) return item;
 
-        try {
-          const result: EnhanceAppDescriptionOutput = await enhanceAppDescription({
-            appName: item.name,
-            appUrl: item.url,
-          });
-          return { ...item, enhancedDescription: result.enhancedDescription, isLoadingDescription: false, errorDescription: null };
-        } catch (error) {
-          console.error(`Error enhancing description for ${item.name}:`, error);
-          return { ...item, enhancedDescription: item.description, isLoadingDescription: false, errorDescription: 'AI enhancement failed.' }; // Use original desc on error
+            try {
+                const result: EnhanceAppDescriptionOutput = await enhanceAppDescription({
+                    appName: item.name,
+                    appUrl: item.url,
+                });
+                return { ...item, enhancedDescription: result.enhancedDescription, isLoadingDescription: false, errorDescription: null };
+            } catch (error) {
+                console.error(`Error enhancing description for ${item.name}:`, error);
+                // Keep original description on error, mark as not loading, set error message
+                return { ...item, enhancedDescription: item.description, isLoadingDescription: false, errorDescription: 'AI enhancement failed.' };
+            }
+        });
+
+        // Wait for all enhancements to complete
+        const results = await Promise.all(promises);
+
+        // Update the state with the processed items
+        // Use functional update to avoid stale state issues if enhancement is rapid
+        setItems(prevItems => {
+            // Create a map for quick lookup of results by name or URL (assuming names are unique)
+            const resultMap = new Map(results.map(res => [res.name, res]));
+            // Map over previous items and update with new results where available
+            return prevItems.map(prevItem => resultMap.get(prevItem.name) || prevItem);
+        });
+
+    }, []); // No dependencies needed for the function definition itself
+
+    // Trigger description enhancement when apps/tools data changes (and initial load is done)
+    useEffect(() => {
+        if (!isLoadingData && apps.length > 0) {
+            enhanceDescriptions(apps, setApps);
         }
-      });
+    }, [apps, isLoadingData, enhanceDescriptions]); // Depend on apps array content
 
-      const results = await Promise.all(promises);
-      setItems(results);
-    }
-
-    fetchAllDescriptions(enhancedApps, setEnhancedApps);
-    fetchAllDescriptions(enhancedTools, setEnhancedTools);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+    useEffect(() => {
+        if (!isLoadingData && tools.length > 0) {
+            enhanceDescriptions(tools, setTools);
+        }
+    }, [tools, isLoadingData, enhanceDescriptions]); // Depend on tools array content
 
 
   const containerVariants = {
@@ -124,7 +158,7 @@ export default function Home() {
     <motion.div key={`${type}-${index}-${item.name}`} variants={itemVariants}>
       <Card className="h-full flex flex-col overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card border border-border rounded-lg p-4 text-center items-center">
         <div className="mb-4">
-          {renderIcon(item.icon)} {/* Render icon for both apps and tools */}
+          {renderIcon(item.icon)} {/* Render icon */}
         </div>
         <CardHeader className="p-2 w-full">
           <CardTitle className="text-lg sm:text-xl uppercase tracking-wide">{item.name}</CardTitle>
@@ -137,8 +171,13 @@ export default function Home() {
                 <Skeleton className="h-5 w-1/2 mx-auto bg-muted/50" />
               </>
             ) : item.errorDescription ? (
-              <p className="text-destructive text-sm italic">{item.errorDescription}</p>
+                // Display error and fallback to original description
+              <>
+                <p className="text-destructive text-xs italic mb-1">{item.errorDescription}</p>
+                <p className="text-sm text-foreground/80">{item.description}</p>
+              </>
             ) : (
+              // Display enhanced or original description
               <p className="text-sm text-foreground/80">{item.enhancedDescription || item.description}</p>
             )}
           </div>
@@ -151,6 +190,50 @@ export default function Home() {
       </Card>
     </motion.div>
   );
+
+ const renderSection = (title: string, items: EnhancedAppTool[], type: 'app' | 'tool') => (
+    <section>
+        <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">{title}</h2>
+        {isLoadingData ? (
+             // Show skeleton grid while initial data is loading
+            <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                {[...Array(type === 'app' ? 6 : 8)].map((_, i) => ( // Placeholder count
+                <motion.div key={`skeleton-${type}-${i}`} variants={itemVariants}>
+                    <Card className="h-full flex flex-col overflow-hidden bg-card border border-border rounded-lg p-4 text-center items-center">
+                         <Skeleton className="h-12 w-12 mb-4 rounded-full bg-muted/50" />
+                         <CardHeader className="p-2 w-full">
+                             <Skeleton className="h-6 w-3/4 mx-auto bg-muted/50" />
+                         </CardHeader>
+                         <CardContent className="flex-grow flex flex-col justify-between w-full p-2">
+                            <div className="min-h-[60px] mb-4 space-y-1">
+                                <Skeleton className="h-5 w-full bg-muted/50" />
+                                <Skeleton className="h-5 w-2/3 mx-auto bg-muted/50" />
+                            </div>
+                            <Skeleton className="h-10 w-full mt-auto bg-muted/50" />
+                        </CardContent>
+                    </Card>
+                </motion.div>
+                ))}
+            </motion.div>
+        ) : items.length === 0 ? (
+             <p className="text-center text-muted-foreground">No {type}s available yet.</p>
+        ) :(
+            <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                {items.map((item, index) => renderCard(item, index, type))}
+            </motion.div>
+        )}
+    </section>
+ );
 
 
   return (
@@ -184,31 +267,12 @@ export default function Home() {
         </motion.div>
       </motion.section>
 
-      {/* Apps Section */}
-      <section>
-        <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">Apps</h2>
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" // Adjusted grid for apps
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {enhancedApps.map((app, index) => renderCard(app, index, 'app'))}
-        </motion.div>
-      </section>
+       {/* Apps Section */}
+       {renderSection("Apps", apps, 'app')}
 
-      {/* Tools Section */}
-      <section>
-        <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">Tools</h2>
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" // Use same grid layout as apps
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {enhancedTools.map((tool, index) => renderCard(tool, index, 'tool'))}
-        </motion.div>
-      </section>
+
+       {/* Tools Section */}
+       {renderSection("Tools", tools, 'tool')}
 
     </div>
   );

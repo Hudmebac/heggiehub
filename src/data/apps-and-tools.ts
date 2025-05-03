@@ -8,120 +8,30 @@ export interface AppTool {
   icon?: string | React.ReactNode; // Can be a lucide icon name (string) or an SVG ReactNode
 }
 
-// Function to extract a plausible name from a URL
-const extractNameFromUrl = (url: string): string => {
-  try {
-    const parsedUrl = new URL(url);
-    let hostname = parsedUrl.hostname.replace(/^www\./, ''); // Remove www.
-    // Handle multi-level subdomains like studio.firebase.google.com
-    const parts = hostname.split('.');
-    hostname = parts.length > 2 ? parts[0] : hostname.split('.')[0]; // Get the main part or the first subdomain
 
-    // Specific overrides based on hostname or path
-    if (parsedUrl.hostname === 'studio.firebase.google.com') return 'Firebase Studio';
-    if (parsedUrl.hostname === 'aistudio.google.com') return 'AI Studio';
-    if (hostname === 'netlify' && parsedUrl.pathname.includes('app')) return "Netlify"; // Simplified Netlify name
-    if (parsedUrl.hostname === 'airfry.netlify.app') return 'Air Fry';
-    if (parsedUrl.hostname === 'emberglow.netlify.app' && parsedUrl.pathname === '/happybirthday.html') return 'Happy Birthday';
-    if (parsedUrl.hostname === 'emberglow.netlify.app') return 'Ember Glow';
-    if (parsedUrl.hostname === 'zenzac.netlify.app') return 'Zenzac';
-    if (parsedUrl.hostname === 'skyzer.netlify.app') return 'Skyzer';
-    if (parsedUrl.hostname === 'debbieheggiespring.netlify.app') return 'Debbie Heggie Spring';
-    if (hostname === 'github') return 'GitHub';
-    if (hostname === 'mureka') return 'Mureka AI';
-    if (hostname === 'suno') return 'Suno AI';
-    if (hostname === 'appsgeyser' && parsedUrl.pathname.includes('next')) return 'AppsGeyser Next';
-    if (hostname === 'copycoder') return 'CopyCoder AI';
-    if (hostname === 'dribbble') return 'Dribbble';
-    if (hostname === 'elevenlabs') return 'ElevenLabs';
-    if (hostname === 'hedra') return 'Hedra';
-    if (hostname === 'unsplash') return 'Unsplash';
-    if (hostname === 'gencraft') return 'GenCraft';
-
-
-    // General case: Capitalize first letter and handle hyphens/camelCase
-    return hostname
-      .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
-      .replace(/[-_]/g, ' ') // Replace hyphens/underscores with space
-      .trim() // Remove leading/trailing spaces
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  } catch (e) {
-    // Handle invalid URLs or parsing errors gracefully
-    console.error(`Error parsing URL ${url}:`, e);
-    // Extract name from path if possible as a fallback
-    const pathParts = url.replace(/^https?:\/\//, '').split('/');
-    const potentialName = pathParts[pathParts.length - 1] || pathParts[0] || 'Unknown App/Tool';
-     return potentialName
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/[-_.]/g, ' ')
-      .trim()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-};
-
-// Define apps URLs and icons
-const appsData: { url: string, icon?: string | React.ReactNode }[] = [
-  { url: "https://airfry.netlify.app/", icon: "ChefHat" },
-  { url: "https://emberglow.netlify.app/", icon: "Flame" },
-  { url: "https://zenzac.netlify.app/", icon: "Wind" },
-  { url: "https://skyzer.netlify.app/", icon: "CloudSun" },
-  { url: "https://debbieheggiespring.netlify.app/", icon: "Flower" },
-  { url: "https://emberglow.netlify.app/happybirthday.html", icon: "Cake" }
+// Initial Apps Data (Will be used if localStorage is empty/invalid)
+export const initialApps: AppTool[] = [
+  { name: "Air Fry", description: "App for air frying recipes.", url: "https://airfry.netlify.app/", icon: "ChefHat" },
+  { name: "Ember Glow", description: "A calming visual experience.", url: "https://emberglow.netlify.app/", icon: "Flame" },
+  { name: "Happy Birthday", description: "A birthday greeting.", url: "https://emberglow.netlify.app/happybirthday.html", icon: "Cake" },
+  { name: "Skyzer", description: "Weather related application.", url: "https://skyzer.netlify.app/", icon: "CloudSun" },
+  { name: "Debbie Heggie Spring", description: "A portfolio or showcase.", url: "https://debbieheggiespring.netlify.app/", icon: "Flower" },
+  { name: "Zenzac", description: "A relaxing utility.", url: "https://zenzac.netlify.app/", icon: "Wind" },
 ];
 
-// Define tools URLs and icons
-const toolsData: { url: string, icon?: string | React.ReactNode }[] = [
-    { url: "https://gencraft.com", icon: "Wand2" },
-    { url: "https://unsplash.com", icon: "Image" },
-    { url: "https://www.mureka.ai", icon: "BrainCircuit" },
-    { url: "https://suno.com", icon: "Music" },
-    { url: "https://github.com", icon: "Github" },
-    { url: "https://app.netlify.com", icon: "Cloud" },
-    { url: "https://next.appsgeyser.com", icon: "AppWindow" },
-    { url: "https://copycoder.ai", icon: "Copy" },
-    { url: "https://dribbble.com", icon: "Dribbble" },
-    { url: "https://elevenlabs.io", icon: "Voicemail" },
-    { url: "https://www.hedra.com", icon: "Video" },
-    { url: "https://studio.firebase.google.com/", icon: "LayoutGrid" }, // Added Firebase Studio
-    { url: "https://aistudio.google.com/", icon: "Sparkles" } // Added AI Studio
+// Initial Tools Data (Will be used if localStorage is empty/invalid)
+export const initialTools: AppTool[] = [
+    { name: "AI Studio", description: "Google's AI development environment.", url: "https://aistudio.google.com/", icon: "Sparkles" },
+    { name: "AppsGeyser Next", description: "Platform for creating Android apps.", url: "https://next.appsgeyser.com", icon: "AppWindow" },
+    { name: "CopyCoder AI", description: "AI tool for code generation or assistance.", url: "https://copycoder.ai", icon: "Copy" },
+    { name: "Dribbble", description: "Showcase platform for designers.", url: "https://dribbble.com", icon: "Dribbble" },
+    { name: "ElevenLabs", description: "AI voice generation tool.", url: "https://elevenlabs.io", icon: "Voicemail" },
+    { name: "Firebase Studio", description: "Develop and manage Firebase projects.", url: "https://studio.firebase.google.com/", icon: "LayoutGrid" },
+    { name: "GenCraft", description: "AI image generation tool.", url: "https://gencraft.com", icon: "Wand2" },
+    { name: "GitHub", description: "Platform for code hosting and collaboration.", url: "https://github.com", icon: "Github" },
+    { name: "Hedra", description: "Platform for creative AI tools.", url: "https://www.hedra.com", icon: "Video" },
+    { name: "Mureka AI", description: "An AI-focused platform or tool.", url: "https://www.mureka.ai", icon: "BrainCircuit" },
+    { name: "Netlify", description: "Platform for web hosting and automation.", url: "https://app.netlify.com", icon: "Cloud" },
+    { name: "Suno AI", description: "AI music generation tool.", url: "https://suno.com", icon: "Music" },
+    { name: "Unsplash", description: "Source for royalty-free images.", url: "https://unsplash.com", icon: "Image" },
 ];
-
-// Helper function to create AppTool objects, handling duplicate names
-const createAppToolList = (data: { url: string, icon?: string | React.ReactNode }[]): AppTool[] => {
-    const nameCounts: { [key: string]: number } = {};
-    return data.map((item): AppTool => {
-        // Ensure URL is a string before passing to extractNameFromUrl
-        const urlString = typeof item.url === 'string' ? item.url : '';
-        if (!urlString) {
-            console.error("Invalid URL found in data:", item);
-            // Provide a fallback name or handle error appropriately
-            return { name: 'Invalid URL', description: 'URL was not provided or is invalid.', url: '', icon: 'AlertTriangle' };
-        }
-
-        let name = extractNameFromUrl(urlString);
-        const baseName = name; // Keep original extracted name for counting
-
-        // Increment count for this base name
-        nameCounts[baseName] = (nameCounts[baseName] || 0) + 1;
-
-        // If this is a duplicate (count > 1), append the count
-        if (nameCounts[baseName] > 1 && baseName !== 'Firebase Studio' && baseName !== 'AI Studio') { // Avoid numbering the new studios if name collision somehow happens
-            name = `${baseName} (${nameCounts[baseName]})`;
-        }
-
-        return {
-            name: name,
-            description: `Explore ${name}`, // Default description
-            url: urlString,
-            icon: item.icon,
-        };
-    });
-};
-
-
-export const apps: AppTool[] = createAppToolList(appsData);
-export const tools: AppTool[] = createAppToolList(toolsData);

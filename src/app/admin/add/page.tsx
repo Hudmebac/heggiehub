@@ -10,16 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-
-// TODO: Replace with actual data persistence logic (e.g., API call)
-async function saveNewItem(itemData: { name: string; url: string; description: string; type: 'app' | 'tool'; icon?: string }) {
-  console.log("Saving new item (simulated):", itemData);
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // In a real app, you'd check the response from your backend here
-  return { success: true };
-}
-
+import { addItem } from '@/lib/storage'; // Import the addItem function
 
 export default function AddItemPage() {
   const router = useRouter();
@@ -31,10 +22,12 @@ export default function AddItemPage() {
   const [type, setType] = useState<'app' | 'tool'>('app'); // Default to 'app'
   const [icon, setIcon] = useState(''); // Optional icon name (Lucide)
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null); // Added state for form-level errors
 
   useEffect(() => {
      let authenticated = false;
      try {
+        // Ensure this runs only on the client
         authenticated = sessionStorage.getItem('isAdminAuthenticated') === 'true';
      } catch (e) {
         console.error("Session storage access error:", e);
@@ -51,28 +44,39 @@ export default function AddItemPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
+    setFormError(null); // Clear previous form errors
+
+    // Basic validation
+    if (!name.trim() || !url.trim() || !description.trim()) {
+      setFormError("Please fill in all required fields.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
-      const result = await saveNewItem({ name, url, description, type, icon });
+      // Attempt to add the item using the storage function
+      const success = addItem(type, { name: name.trim(), url, description, icon: icon.trim() || undefined });
 
-      if (result.success) {
+      if (success) {
         toast({
           title: "Success!",
           description: `${type.charAt(0).toUpperCase() + type.slice(1)} "${name}" added successfully.`,
         });
         // Clear form or redirect
         // setName(''); setUrl(''); setDescription(''); setIcon(''); setType('app');
-        router.push('/admin'); // Redirect back to main admin page after success
+        router.push('/'); // Redirect to home page to see the updated list
       } else {
-        // Handle failure from the backend
+        // Handle failure (e.g., duplicate name detected by addItem)
+         setFormError(`Failed to add ${type}. An item with this name might already exist.`);
          toast({
           title: "Error",
-          description: `Failed to add ${type}. Please try again.`,
+          description: `Failed to add ${type}. An item with this name might already exist.`,
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Error adding item:", error);
+       setFormError("An unexpected error occurred. Please try again.");
        toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -95,7 +99,7 @@ export default function AddItemPage() {
       <Card>
         <CardHeader>
           <CardTitle>Add New Item</CardTitle>
-          <CardDescription>Add a new App or Tool to the showcase.</CardDescription>
+          <CardDescription>Add a new App or Tool to the showcase. It will appear alphabetically.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -103,7 +107,7 @@ export default function AddItemPage() {
              <div className="space-y-2">
                 <Label>Type</Label>
                  <RadioGroup
-                    defaultValue="app"
+                    value={type} // Controlled component
                     onValueChange={(value: 'app' | 'tool') => setType(value)}
                     className="flex space-x-4"
                   >
@@ -127,6 +131,8 @@ export default function AddItemPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder={`Enter ${type} name`}
+                aria-invalid={!!formError} // Indicate error state
+                aria-describedby="form-error-message"
               />
             </div>
 
@@ -140,6 +146,8 @@ export default function AddItemPage() {
                 onChange={(e) => setUrl(e.target.value)}
                 required
                 placeholder="https://example.com"
+                 aria-invalid={!!formError}
+                aria-describedby="form-error-message"
               />
             </div>
 
@@ -152,6 +160,8 @@ export default function AddItemPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 required
                 placeholder={`Short description for the ${type}`}
+                 aria-invalid={!!formError}
+                 aria-describedby="form-error-message"
               />
                  <p className="text-xs text-muted-foreground">
                     This description will be used initially. You can optionally enhance it later using AI.
@@ -160,7 +170,7 @@ export default function AddItemPage() {
 
             {/* Icon (Optional) */}
             <div className="space-y-2">
-              <Label htmlFor="icon">Icon (Optional)</Label>
+              <Label htmlFor="icon">Icon Name (Optional)</Label>
               <Input
                 id="icon"
                 value={icon}
@@ -168,9 +178,16 @@ export default function AddItemPage() {
                 placeholder="Lucide icon name (e.g., Code, Wand2)"
               />
               <p className="text-xs text-muted-foreground">
-                Enter a valid icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline text-primary">lucide.dev/icons</a>. Leave blank for default.
+                Enter a valid icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline text-primary">lucide.dev/icons</a>. Leave blank for default icon. Case-sensitive.
               </p>
             </div>
+
+             {/* Form Error Message */}
+            {formError && (
+              <p id="form-error-message" className="text-sm text-destructive text-center">
+                {formError}
+              </p>
+            )}
 
 
             <div className="flex justify-end">
@@ -184,4 +201,3 @@ export default function AddItemPage() {
     </div>
   );
 }
-
