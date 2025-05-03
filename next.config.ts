@@ -1,6 +1,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['react-intersection-observer'], // Add this line
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
