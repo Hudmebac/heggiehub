@@ -13,11 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Shield, AppWindow, PenTool } from "lucide-react"; // Changed Tool to PenTool
-import { AdminAuthDialog } from '@/components/admin/admin-auth-dialog';
+import { ChevronDown, AppWindow, PenTool, Github, Linkedin } from "lucide-react"; // Changed Tool to PenTool, Added Github, Linkedin, removed Shield
+
+// Removed AdminAuthDialog import as it's moved to the Footer
 
 export function Header() {
-  const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
+  // Removed isAdminAuthOpen state as it's moved to the Footer
   const [apps, setApps] = useState<AppTool[]>([]);
   const [tools, setTools] = useState<AppTool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,11 +103,25 @@ export function Header() {
             </nav>
           </div>
           <div className="flex items-center space-x-2"> {/* Container for right-side icons */}
+             {/* LinkedIn Icon Button */}
+             <Button variant="ghost" size="icon" asChild>
+                <Link href="https://www.linkedin.com/in/craig-heggie-a51b4340/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
+                    <Linkedin className="h-5 w-5" />
+                </Link>
+             </Button>
+             {/* GitHub Icon Button */}
+             <Button variant="ghost" size="icon" asChild>
+                 <Link href="https://github.com/Hudmebac" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">
+                    <Github className="h-5 w-5" />
+                 </Link>
+             </Button>
             <ThemeToggle />
-             {/* Admin Icon Button */}
+             {/* Admin Icon Button - Removed from header */}
+            {/*
             <Button variant="ghost" size="icon" onClick={() => setIsAdminAuthOpen(true)} aria-label="Admin Access">
                 <Shield className="h-5 w-5" />
             </Button>
+            */}
           </div>
            {/* Mobile Menu (Simplified for now) */}
            <div className="md:hidden ml-4">
@@ -118,7 +133,7 @@ export function Header() {
             </div>
         </div>
       </header>
-      <AdminAuthDialog open={isAdminAuthOpen} onOpenChange={setIsAdminAuthOpen} />
+      {/* AdminAuthDialog moved to Footer */}
     </>
   );
 }
