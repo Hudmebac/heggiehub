@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { enhanceBio, type EnhanceBioOutput } from '@/ai/flows/enhance-bio';
+// Removed AI import as it's no longer used for bio enhancement
+// import { enhanceBio, type EnhanceBioOutput } from '@/ai/flows/enhance-bio';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getStoredApps, getStoredTools } from '@/lib/storage'; // Import storage functions
@@ -21,7 +22,7 @@ import {
   DialogTrigger,
   DialogClose // Import DialogClose
 } from "@/components/ui/dialog";
-import { Info, X } from 'lucide-react'; // Import X icon for close
+import { Info, X, AlertTriangle } from 'lucide-react'; // Import X icon for close and AlertTriangle for disclaimer
 
 
 // Helper function to render icons
@@ -44,9 +45,11 @@ const renderIcon = (iconIdentifier: string | React.ReactNode | undefined, classN
 
 
 export default function Home() {
-  const [enhancedBio, setEnhancedBio] = useState<string | null>(null);
-  const [isLoadingBio, setIsLoadingBio] = useState(true);
-  const [errorBio, setErrorBio] = useState<string | null>(null);
+  // Removed state related to AI bio enhancement
+  // const [enhancedBio, setEnhancedBio] = useState<string | null>(null);
+  // const [isLoadingBio, setIsLoadingBio] = useState(true);
+  // const [errorBio, setErrorBio] = useState<string | null>(null);
+  const staticBio = "As a Technical Product Manager, I bridge the gap between complex technical challenges and user-centric product solutions. While I'm passionate about technology and enjoy exploring development with AI tools, my core focus is defining product strategy, prioritizing features, and collaborating with engineering teams to deliver value. This space showcases some of my explorations and experiments in that journey."; // Static bio text
   const [apps, setApps] = useState<AppTool[]>([]); // Use AppTool[] directly
   const [tools, setTools] = useState<AppTool[]>([]); // Use AppTool[] directly
   const [isLoadingData, setIsLoadingData] = useState(true); // Loading state for initial data fetch
@@ -73,28 +76,7 @@ export default function Home() {
   }, [fetchData]);
 
 
-  // Fetch enhanced bio
-  useEffect(() => {
-    async function fetchEnhancedBio() {
-      setIsLoadingBio(true);
-      setErrorBio(null);
-      try {
-        const result: EnhanceBioOutput = await enhanceBio({
-          linkedinUrl: 'https://www.linkedin.com/in/craig-heggie-a51b4340/',
-        });
-        setEnhancedBio(result.enhancedBio);
-      } catch (error) {
-        console.error('Error enhancing bio:', error);
-        setErrorBio('Failed to enhance bio. Using default.');
-        // Ensure defaultBio is a simple string or null
-        const defaultBio = 'Experienced software engineer with a passion for building web applications.';
-        setEnhancedBio(defaultBio); // Default bio on error
-      } finally {
-        setIsLoadingBio(false);
-      }
-    }
-    fetchEnhancedBio();
-  }, []);
+  // Removed useEffect for fetching enhanced bio
 
 
   const containerVariants = {
@@ -219,7 +201,7 @@ export default function Home() {
 
   return (
     <div className="space-y-16"> {/* Increased space between sections */}
-      {/* Hero Section - AI Bio */}
+      {/* Hero Section - Static Bio */}
       <motion.section
         initial="hidden"
         animate="visible"
@@ -233,19 +215,20 @@ export default function Home() {
           Welcome to HeggieHub
         </motion.h1>
         <motion.div variants={itemVariants} className="max-w-3xl mx-auto">
-          {isLoadingBio ? (
-             <div className="space-y-2">
-                <Skeleton className="h-6 w-3/4 mx-auto bg-muted/50" />
-                <Skeleton className="h-6 w-1/2 mx-auto bg-muted/50" />
-             </div>
-          ) : errorBio ? (
-            <p className="text-destructive">{errorBio}</p>
-          ) : (
-            <p className="text-lg sm:text-xl md:text-2xl text-foreground/80">
-              {enhancedBio || 'Loading bio...'} {/* Ensure enhancedBio is displayed or a fallback */}
+           <p className="text-lg sm:text-xl md:text-2xl text-foreground/80 mb-6"> {/* Added margin-bottom */}
+              {staticBio}
             </p>
-          )}
         </motion.div>
+         {/* Disclaimer Section */}
+         <motion.div
+            variants={itemVariants}
+            className="max-w-3xl mx-auto mt-6 pt-4 border-t border-border/30" // Added margin-top, padding-top, and border
+          >
+            <p className="text-sm text-muted-foreground italic flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 inline-block mr-2 flex-shrink-0" aria-label="Disclaimer icon"/>
+              <span>I might have 'Technical' in my job title, but that doesn't mean I'm a Software Engineer! I'm a Technical Product Manager dabbling in app creation using AI tooling and learning along the way ;)</span>
+            </p>
+          </motion.div>
       </motion.section>
 
        {/* Apps Section */}
