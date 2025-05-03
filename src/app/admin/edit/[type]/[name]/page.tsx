@@ -1,36 +1,66 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { addItem } from '@/lib/storage'; // Import the addItem function
-import { type AppTool } from '@/data/apps-and-tools'; // Import AppTool type
-import { ArrowLeft } from 'lucide-react';
+import { getStoredApps, getStoredTools, updateItem } from '@/lib/storage';
+import { type AppTool } from '@/data/apps-and-tools';
+import { ArrowLeft } from 'lucide-react'; // Import ArrowLeft icon
 
-export default function AddItemPage() {
+type ItemType = 'app' | 'tool';
+
+export default function EditItemPage() {
   const router = useRouter();
+  const params = useParams();
   const { toast } = useToast();
+
+  const itemType = params.type as ItemType;
+  const originalName = decodeURIComponent(params.name as string);
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [itemData, setItemData] = useState<AppTool | null>(null);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<'app' | 'tool'>('app'); // Default to 'app'
-  const [icon, setIcon] = useState(''); // Optional icon name (Lucide)
-  const [info, setInfo] = useState(''); // Optional info text for Apps
+  const [icon, setIcon] = useState('');
+  const [info, setInfo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null); // Added state for form-level errors
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Loading state for item data
+
+  const getItemData = useCallback(() => {
+    setIsLoading(true);
+    const items = itemType === 'app' ? getStoredApps() : getStoredTools();
+    const foundItem = items.find(item => item.name.toLowerCase() === originalName.toLowerCase());
+
+    if (foundItem) {
+      setItemData(foundItem);
+      setName(foundItem.name);
+      setUrl(foundItem.url);
+      setDescription(foundItem.description);
+      setIcon(typeof foundItem.icon === 'string' ? foundItem.icon : ''); // Handle non-string icons
+      setInfo(foundItem.info || ''); // Handle missing info
+    } else {
+      toast({
+        title: "Error",
+        description: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} not found. Redirecting...`,
+        variant: "destructive",
+      });
+      router.replace('/admin'); // Redirect if item not found
+    }
+    setIsLoading(false);
+  }, [itemType, originalName, router, toast]);
+
 
   useEffect(() => {
      let authenticated = false;
      try {
-        // Ensure this runs only on the client
         authenticated = sessionStorage.getItem('isAdminAuthenticated') === 'true';
      } catch (e) {
         console.error("Session storage access error:", e);
@@ -40,16 +70,16 @@ export default function AddItemPage() {
       router.replace('/');
     } else {
        setIsAuthenticated(true);
+       getItemData(); // Fetch item data after auth check
     }
-  }, [router]);
+  }, [router, getItemData]); // Add getItemData dependency
 
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
-    setFormError(null); // Clear previous form errors
+    setFormError(null);
 
-    // Basic validation
     if (!name.trim() || !url.trim() || !description.trim()) {
       setFormError("Please fill in all required fields.");
       setIsSubmitting(false);
@@ -57,39 +87,36 @@ export default function AddItemPage() {
     }
 
     try {
-       // Construct item data using AppTool type
-      const itemToAdd: AppTool = {
-        name: name.trim(),
-        url,
-        description,
-        icon: icon.trim() || undefined, // Set to undefined if empty string
-        info: type === 'app' && info.trim() ? info.trim() : undefined // Conditionally add info, set to undefined if empty or not 'app'
-      };
+       const updatedData: Partial<AppTool> = {
+            name: name.trim(),
+            url,
+            description,
+            icon: icon.trim() || undefined, // Set to undefined if empty
+       };
 
+       // Conditionally add info only for apps
+       if (itemType === 'app') {
+         updatedData.info = info.trim() || undefined;
+       }
 
-      // Attempt to add the item using the storage function
-      const success = addItem(type, itemToAdd);
-
+      const success = updateItem(itemType, originalName, updatedData);
 
       if (success) {
         toast({
           title: "Success!",
-          description: `${type.charAt(0).toUpperCase() + type.slice(1)} "${name}" added successfully.`,
+          description: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} "${name}" updated successfully.`,
         });
-        // Optionally clear form before redirecting
-        setName(''); setUrl(''); setDescription(''); setIcon(''); setInfo(''); setType('app');
-        router.push('/admin'); // Redirect to admin page to see the updated list
+        router.push('/admin'); // Redirect back to admin list
       } else {
-        // Handle failure (e.g., duplicate name detected by addItem)
-         setFormError(`Failed to add ${type}. An item with this name might already exist.`);
+        setFormError(`Failed to update ${itemType}. The new name might already exist or another error occurred.`);
          toast({
           title: "Error",
-          description: `Failed to add ${type}. An item with this name might already exist.`,
+          description: `Failed to update ${itemType}. The new name might already exist or another error occurred.`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Error adding item:", error);
+      console.error("Error updating item:", error);
        setFormError("An unexpected error occurred. Please try again.");
        toast({
         title: "Error",
@@ -101,8 +128,9 @@ export default function AddItemPage() {
     }
   };
 
-  if (isAuthenticated === null) {
-    return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
+  // Loading state
+  if (isAuthenticated === null || isLoading || !itemData) {
+    return <div className="flex justify-center items-center h-screen"><p>Loading item details...</p></div>;
   }
 
   return (
@@ -112,32 +140,11 @@ export default function AddItemPage() {
       </Button>
       <Card>
         <CardHeader>
-          <CardTitle>Add New Item</CardTitle>
-          <CardDescription>Add a new App or Tool to the showcase. It will appear alphabetically.</CardDescription>
+          <CardTitle>Edit {itemType.charAt(0).toUpperCase() + itemType.slice(1)}</CardTitle>
+          <CardDescription>Update the details for "{originalName}".</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-             {/* Type Selection */}
-             <div className="space-y-2">
-                <Label>Type</Label>
-                 <RadioGroup
-                    value={type} // Controlled component
-                    onValueChange={(value: 'app' | 'tool') => {
-                        setType(value);
-                        if (value === 'tool') setInfo(''); // Clear info if switching to tool
-                    }}
-                    className="flex space-x-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="app" id="r-app" />
-                      <Label htmlFor="r-app">App</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="tool" id="r-tool" />
-                      <Label htmlFor="r-tool">Tool</Label>
-                    </div>
-                  </RadioGroup>
-            </div>
 
             {/* Name */}
             <div className="space-y-2">
@@ -147,8 +154,8 @@ export default function AddItemPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                placeholder={`Enter ${type} name`}
-                aria-invalid={!!formError} // Indicate error state
+                placeholder={`Enter ${itemType} name`}
+                aria-invalid={!!formError}
                 aria-describedby="form-error-message"
               />
             </div>
@@ -176,14 +183,14 @@ export default function AddItemPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
-                placeholder={`Short description for the ${type}`}
+                placeholder={`Short description for the ${itemType}`}
                  aria-invalid={!!formError}
                  aria-describedby="form-error-message"
               />
             </div>
 
              {/* Info (Optional, only for Apps) */}
-            {type === 'app' && (
+            {itemType === 'app' && (
                 <div className="space-y-2">
                 <Label htmlFor="info">More Info (Optional)</Label>
                 <Textarea
@@ -191,10 +198,10 @@ export default function AddItemPage() {
                     value={info}
                     onChange={(e) => setInfo(e.target.value)}
                     placeholder="Enter detailed information or backstory for the app (will appear in a popup)."
-                    rows={5} // Adjust rows as needed
+                    rows={5}
                 />
                  <p className="text-xs text-muted-foreground">
-                   Displayed when the user clicks the 'Info' icon on the app card. Supports basic formatting like newlines.
+                   Displayed when the user clicks the 'Info' icon on the app card. Supports basic formatting like newlines. Leave blank to remove info text.
                  </p>
                 </div>
             )}
@@ -223,7 +230,7 @@ export default function AddItemPage() {
 
             <div className="flex justify-end">
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? `Adding ${type}...` : `Add ${type.charAt(0).toUpperCase() + type.slice(1)}`}
+                {isSubmitting ? `Updating ${itemType}...` : `Update ${itemType.charAt(0).toUpperCase() + itemType.slice(1)}`}
               </Button>
             </div>
           </form>

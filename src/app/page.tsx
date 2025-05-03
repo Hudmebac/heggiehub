@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { enhanceBio, type EnhanceBioOutput } from '@/ai/flows/enhance-bio';
-// Removed: import { enhanceAppDescription, type EnhanceAppDescriptionOutput } from '@/ai/flows/enhance-app-description';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getStoredApps, getStoredTools } from '@/lib/storage'; // Import storage functions
@@ -20,8 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose // Import DialogClose
 } from "@/components/ui/dialog";
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react'; // Import X icon for close
+
 
 // Helper function to render icons
 const renderIcon = (iconIdentifier: string | React.ReactNode | undefined, className?: string): React.ReactNode => {
@@ -37,15 +38,10 @@ const renderIcon = (iconIdentifier: string | React.ReactNode | undefined, classN
     return IconComponent ? <IconComponent className={combinedClassName} aria-label={`${iconIdentifier} icon`} /> : <LucideIcons.AppWindow className={combinedClassName} aria-label="Default App Icon (Invalid Name)" />;
   }
   // If it's already a ReactNode (like an inline SVG), render it directly
+  // Use React.cloneElement to apply the className
   return React.isValidElement(iconIdentifier) ? React.cloneElement(iconIdentifier as React.ReactElement, { className: combinedClassName }) : <LucideIcons.AppWindow className={combinedClassName} aria-label="Default App Icon" />;
 };
 
-// Use AppTool directly, no need for EnhancedAppTool anymore
-// interface EnhancedAppTool extends AppTool {
-//   enhancedDescription?: string;
-//   isLoadingDescription: boolean; // Always include loading state initially
-//   errorDescription?: string | null;
-// }
 
 export default function Home() {
   const [enhancedBio, setEnhancedBio] = useState<string | null>(null);
@@ -55,15 +51,26 @@ export default function Home() {
   const [tools, setTools] = useState<AppTool[]>([]); // Use AppTool[] directly
   const [isLoadingData, setIsLoadingData] = useState(true); // Loading state for initial data fetch
 
-  // Fetch initial apps and tools from storage (client-side)
-  useEffect(() => {
-    const storedApps = getStoredApps();
-    const storedTools = getStoredTools();
+   // Fetch initial apps and tools from storage (client-side)
+   const fetchData = useCallback(() => {
+    setIsLoadingData(true);
+    try {
+      const storedApps = getStoredApps();
+      const storedTools = getStoredTools();
 
-    setApps(storedApps); // Set directly, no enhancement state needed
-    setTools(storedTools); // Set directly, no enhancement state needed
-    setIsLoadingData(false); // Mark initial data loading as complete
-  }, []);
+      setApps(storedApps); // Set directly
+      setTools(storedTools); // Set directly
+    } catch (error) {
+      console.error("Error fetching data from storage:", error);
+       // Handle error, maybe show a toast
+    } finally {
+       setIsLoadingData(false); // Mark loading as complete
+    }
+   }, []); // Empty dependency array, runs once on mount or when called
+
+  useEffect(() => {
+    fetchData(); // Fetch data on initial mount
+  }, [fetchData]);
 
 
   // Fetch enhanced bio
@@ -79,18 +86,15 @@ export default function Home() {
       } catch (error) {
         console.error('Error enhancing bio:', error);
         setErrorBio('Failed to enhance bio. Using default.');
-        setEnhancedBio('Experienced software engineer with a passion for building web applications.'); // Default bio on error
+        // Ensure defaultBio is a simple string or null
+        const defaultBio = 'Experienced software engineer with a passion for building web applications.';
+        setEnhancedBio(defaultBio); // Default bio on error
       } finally {
         setIsLoadingBio(false);
       }
     }
     fetchEnhancedBio();
   }, []);
-
-   // Removed AI Description Enhancement logic
-   // const enhanceDescriptions = useCallback(...)
-   // useEffect(() => { ... enhanceDescriptions ...}, [apps, ...])
-   // useEffect(() => { ... enhanceDescriptions ...}, [tools, ...])
 
 
   const containerVariants = {
@@ -126,7 +130,7 @@ export default function Home() {
         </div>
         <CardHeader className="p-2 w-full relative"> {/* Added relative positioning */}
           <CardTitle className="text-lg sm:text-xl uppercase tracking-wide">{item.name}</CardTitle>
-            {/* Info Dialog Trigger - Only for Apps */}
+            {/* Info Dialog Trigger - Only for Apps with info */}
            {type === 'app' && item.info && (
             <Dialog>
               <DialogTrigger asChild>
@@ -138,19 +142,24 @@ export default function Home() {
               <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{item.name} - More Info</DialogTitle>
-                  <DialogDescription className="text-left whitespace-pre-wrap pt-4">
+                   {/* Manual Close Button */}
+                   <DialogClose asChild>
+                      <Button variant="ghost" size="icon" className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">Close</span>
+                      </Button>
+                    </DialogClose>
+                </DialogHeader>
+                 <DialogDescription className="text-left whitespace-pre-wrap pt-4 text-sm text-foreground/80"> {/* Adjusted styling */}
                     {item.info}
                   </DialogDescription>
-                </DialogHeader>
-                 {/* Optional: Add a close button if needed */}
-                 {/* <DialogFooter> <Button type="button" onClick={() => ...}>Close</Button> </DialogFooter> */}
+                 {/* Removed footer close button */}
               </DialogContent>
             </Dialog>
           )}
         </CardHeader>
         <CardContent className="flex-grow flex flex-col justify-between w-full p-2">
           <div className="min-h-[60px] mb-4"> {/* Consistent min height for description */}
-            {/* Display original description directly */}
             <p className="text-sm text-foreground/80">{item.description}</p>
           </div>
           <Button asChild className="w-full mt-auto bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -163,7 +172,7 @@ export default function Home() {
     </motion.div>
   );
 
- const renderSection = (title: string, items: AppTool[], type: 'app' | 'tool') => ( // Use AppTool[]
+ const renderSection = (title: string, items: AppTool[], type: 'app' | 'tool') => (
     <section>
         <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">{title}</h2>
         {isLoadingData ? (
@@ -233,7 +242,7 @@ export default function Home() {
             <p className="text-destructive">{errorBio}</p>
           ) : (
             <p className="text-lg sm:text-xl md:text-2xl text-foreground/80">
-              {enhancedBio}
+              {enhancedBio || 'Loading bio...'} {/* Ensure enhancedBio is displayed or a fallback */}
             </p>
           )}
         </motion.div>
@@ -249,3 +258,4 @@ export default function Home() {
     </div>
   );
 }
+

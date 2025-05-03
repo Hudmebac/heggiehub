@@ -13,7 +13,9 @@ function isAppTool(item: any): item is AppTool {
     item !== null &&
     typeof item.name === 'string' &&
     typeof item.description === 'string' &&
-    typeof item.url === 'string' // Icon is optional
+    typeof item.url === 'string' && // Icon is optional, info is optional
+    (typeof item.icon === 'string' || typeof item.icon === 'undefined' || React.isValidElement(item.icon)) && // Allow string, undefined, or ReactNode for icon
+    (typeof item.info === 'string' || typeof item.info === 'undefined') // Allow string or undefined for info
   );
 }
 
@@ -44,7 +46,13 @@ function getItems(key: string, initialData: AppTool[]): AppTool[] {
       const parsedItems = JSON.parse(storedValue);
        // Validate the parsed data structure
       if (isAppToolArray(parsedItems)) {
-         return [...parsedItems].sort((a, b) => a.name.localeCompare(b.name));
+         // Ensure all expected fields exist, potentially adding missing optional ones
+         const validatedItems = parsedItems.map(item => ({
+            ...item,
+            icon: item.icon || undefined, // Ensure icon exists or is undefined
+            info: item.info || undefined // Ensure info exists or is undefined
+         }));
+         return [...validatedItems].sort((a, b) => a.name.localeCompare(b.name));
       } else {
         console.warn(`Invalid data format found in localStorage for key "${key}". Falling back to initial data.`);
         // Optionally clear the invalid data: localStorage.removeItem(key);
@@ -71,13 +79,37 @@ export function getStoredTools(): AppTool[] {
 // --- Setters ---
 
 /**
+ * Saves items to localStorage.
+ * MUST be called client-side.
+ * @param key - The localStorage key.
+ * @param items - The array of items to save.
+ * @returns boolean indicating success or failure.
+ */
+function saveItems(key: string, items: AppTool[]): boolean {
+   if (typeof window === 'undefined') {
+    console.error("Cannot save items: localStorage is not available.");
+    return false;
+  }
+  try {
+     // Sort before saving
+    const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
+    localStorage.setItem(key, JSON.stringify(sortedItems));
+    return true;
+  } catch (error) {
+    console.error(`Error writing localStorage key “${key}”:`, error);
+    return false;
+  }
+}
+
+
+/**
  * Adds a new item (App or Tool) to localStorage.
  * MUST be called client-side.
  * @param type - 'app' or 'tool'
  * @param newItemData - The data for the new item to add.
  * @returns boolean indicating success or failure.
  */
-export function addItem(type: 'app' | 'tool', newItemData: Omit<AppTool, 'description'> & { description: string }): boolean {
+export function addItem(type: 'app' | 'tool', newItemData: AppTool): boolean { // Use AppTool directly
    if (typeof window === 'undefined') {
     console.error("Cannot add item: localStorage is not available.");
     return false;
@@ -94,23 +126,124 @@ export function addItem(type: 'app' | 'tool', newItemData: Omit<AppTool, 'descri
     const nameExists = currentItems.some(item => item.name.toLowerCase() === newItemData.name.toLowerCase());
     if (nameExists) {
         console.warn(`Item with name "${newItemData.name}" already exists. Not adding duplicate.`);
-        // Optionally, you could throw an error or return a specific status
         return false; // Indicate failure due to duplicate name
     }
-
 
     // Add the new item
     const updatedItems = [...currentItems, newItemData];
 
-    // Sort before saving (optional, but good for consistency if reading unsorted)
-    updatedItems.sort((a, b) => a.name.localeCompare(b.name));
-
-    // Save back to localStorage
-    localStorage.setItem(key, JSON.stringify(updatedItems));
-    console.log(`${type} added successfully and stored.`);
-    return true; // Indicate success
+    // Save back to localStorage (saveItems handles sorting)
+    const success = saveItems(key, updatedItems);
+    if(success) {
+       console.log(`${type} added successfully and stored.`);
+    }
+    return success;
   } catch (error) {
     console.error(`Error adding ${type} to localStorage:`, error);
     return false; // Indicate failure
+  }
+}
+
+/**
+ * Removes an item (App or Tool) from localStorage by its name.
+ * MUST be called client-side.
+ * @param type - 'app' or 'tool'
+ * @param nameToRemove - The name of the item to remove (case-insensitive).
+ * @returns boolean indicating success or failure.
+ */
+export function removeItem(type: 'app' | 'tool', nameToRemove: string): boolean {
+  if (typeof window === 'undefined') {
+    console.error("Cannot remove item: localStorage is not available.");
+    return false;
+  }
+
+  const key = type === 'app' ? APPS_STORAGE_KEY : TOOLS_STORAGE_KEY;
+  const initialData = type === 'app' ? initialApps : initialTools; // Needed for getItems default
+
+  try {
+    const currentItems = getItems(key, initialData);
+    const itemExists = currentItems.some(item => item.name.toLowerCase() === nameToRemove.toLowerCase());
+
+    if (!itemExists) {
+      console.warn(`Item with name "${nameToRemove}" not found. Cannot remove.`);
+      return false; // Indicate failure because item doesn't exist
+    }
+
+    const updatedItems = currentItems.filter(item => item.name.toLowerCase() !== nameToRemove.toLowerCase());
+
+    // Save the filtered list back to localStorage
+    const success = saveItems(key, updatedItems);
+     if(success) {
+       console.log(`${type} "${nameToRemove}" removed successfully.`);
+    }
+    return success;
+  } catch (error) {
+    console.error(`Error removing ${type} from localStorage:`, error);
+    return false;
+  }
+}
+
+/**
+ * Updates an existing item (App or Tool) in localStorage.
+ * MUST be called client-side.
+ * @param type - 'app' or 'tool'
+ * @param originalName - The original name of the item to update (case-insensitive).
+ * @param updatedData - An object containing the fields to update.
+ * @returns boolean indicating success or failure.
+ */
+export function updateItem(type: 'app' | 'tool', originalName: string, updatedData: Partial<AppTool>): boolean {
+  if (typeof window === 'undefined') {
+    console.error("Cannot update item: localStorage is not available.");
+    return false;
+  }
+
+  const key = type === 'app' ? APPS_STORAGE_KEY : TOOLS_STORAGE_KEY;
+  const initialData = type === 'app' ? initialApps : initialTools;
+
+  try {
+    const currentItems = getItems(key, initialData);
+    const itemIndex = currentItems.findIndex(item => item.name.toLowerCase() === originalName.toLowerCase());
+
+    if (itemIndex === -1) {
+      console.warn(`Item with original name "${originalName}" not found. Cannot update.`);
+      return false; // Indicate failure because item doesn't exist
+    }
+
+    // If the name is being changed, check if the new name already exists (excluding the item being updated)
+    if (updatedData.name && updatedData.name.toLowerCase() !== originalName.toLowerCase()) {
+      const newNameExists = currentItems.some((item, index) =>
+        index !== itemIndex && item.name.toLowerCase() === updatedData.name!.toLowerCase()
+      );
+      if (newNameExists) {
+        console.warn(`Cannot update: Another item with the name "${updatedData.name}" already exists.`);
+        return false; // Indicate failure due to new name conflict
+      }
+    }
+
+    // Create the updated item by merging old and new data
+    const updatedItem = {
+      ...currentItems[itemIndex],
+      ...updatedData,
+      // Ensure optional fields are handled correctly (allow removing them)
+      icon: updatedData.icon !== undefined ? updatedData.icon : currentItems[itemIndex].icon,
+      info: updatedData.info !== undefined ? updatedData.info : currentItems[itemIndex].info,
+    };
+
+    // Create the new array with the updated item
+    const updatedItems = [
+      ...currentItems.slice(0, itemIndex),
+      updatedItem,
+      ...currentItems.slice(itemIndex + 1),
+    ];
+
+    // Save the updated list back to localStorage
+    const success = saveItems(key, updatedItems);
+    if (success) {
+       console.log(`${type} "${originalName}" updated successfully.`);
+    }
+    return success;
+  } catch (error) {
+    console.error(`Error updating ${type} in localStorage:`, error);
+    return false;
   }
 }
