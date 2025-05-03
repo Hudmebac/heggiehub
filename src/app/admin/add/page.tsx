@@ -21,6 +21,7 @@ export default function AddItemPage() {
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'app' | 'tool'>('app'); // Default to 'app'
   const [icon, setIcon] = useState(''); // Optional icon name (Lucide)
+  const [info, setInfo] = useState(''); // Optional info text for Apps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null); // Added state for form-level errors
 
@@ -54,8 +55,18 @@ export default function AddItemPage() {
     }
 
     try {
+       // Construct item data, including optional info only for apps
+      const itemToAdd = {
+        name: name.trim(),
+        url,
+        description,
+        icon: icon.trim() || undefined,
+        ...(type === 'app' && info.trim() && { info: info.trim() }) // Conditionally add info
+      };
+
       // Attempt to add the item using the storage function
-      const success = addItem(type, { name: name.trim(), url, description, icon: icon.trim() || undefined });
+      const success = addItem(type, itemToAdd);
+
 
       if (success) {
         toast({
@@ -63,7 +74,7 @@ export default function AddItemPage() {
           description: `${type.charAt(0).toUpperCase() + type.slice(1)} "${name}" added successfully.`,
         });
         // Clear form or redirect
-        // setName(''); setUrl(''); setDescription(''); setIcon(''); setType('app');
+        // setName(''); setUrl(''); setDescription(''); setIcon(''); setInfo(''); setType('app');
         router.push('/'); // Redirect to home page to see the updated list
       } else {
         // Handle failure (e.g., duplicate name detected by addItem)
@@ -163,10 +174,28 @@ export default function AddItemPage() {
                  aria-invalid={!!formError}
                  aria-describedby="form-error-message"
               />
-                 <p className="text-xs text-muted-foreground">
+                 {/* Removed AI enhancement hint */}
+                 {/* <p className="text-xs text-muted-foreground">
                     This description will be used initially. You can optionally enhance it later using AI.
-                 </p>
+                 </p> */}
             </div>
+
+             {/* Info (Optional, only for Apps) */}
+            {type === 'app' && (
+                <div className="space-y-2">
+                <Label htmlFor="info">More Info (Optional)</Label>
+                <Textarea
+                    id="info"
+                    value={info}
+                    onChange={(e) => setInfo(e.target.value)}
+                    placeholder="Enter detailed information or backstory for the app (will appear in a popup)."
+                    rows={5} // Adjust rows as needed
+                />
+                 <p className="text-xs text-muted-foreground">
+                   Displayed when the user clicks the 'Info' icon on the app card. Supports basic formatting like newlines.
+                 </p>
+                </div>
+            )}
 
             {/* Icon (Optional) */}
             <div className="space-y-2">
