@@ -73,7 +73,7 @@ const appsData: { url: string, icon?: string | React.ReactNode }[] = [
 const toolsData: { url: string, icon?: string | React.ReactNode }[] = [
     { url: "https://gencraft.com", icon: "Wand2" },
     { url: "https://unsplash.com", icon: "Image" },
-    { url: "https://unsplash.com", icon: "Image" }, // Second Unsplash
+    // Removed duplicate Unsplash entry
     { url: "https://www.mureka.ai", icon: "BrainCircuit" },
     { url: "https://suno.com", icon: "Music" },
     { url: "https://github.com", icon: "Github" },
@@ -89,7 +89,15 @@ const toolsData: { url: string, icon?: string | React.ReactNode }[] = [
 const createAppToolList = (data: { url: string, icon?: string | React.ReactNode }[]): AppTool[] => {
     const nameCounts: { [key: string]: number } = {};
     return data.map((item): AppTool => {
-        let name = extractNameFromUrl(item.url);
+        // Ensure URL is a string before passing to extractNameFromUrl
+        const urlString = typeof item.url === 'string' ? item.url : '';
+        if (!urlString) {
+            console.error("Invalid URL found in data:", item);
+            // Provide a fallback name or handle error appropriately
+            return { name: 'Invalid URL', description: 'URL was not provided or is invalid.', url: '', icon: 'AlertTriangle' };
+        }
+
+        let name = extractNameFromUrl(urlString);
         const baseName = name; // Keep original extracted name for counting
 
         // Increment count for this base name
@@ -103,11 +111,12 @@ const createAppToolList = (data: { url: string, icon?: string | React.ReactNode 
         return {
             name: name,
             description: `Explore ${name}`, // Default description
-            url: item.url,
+            url: urlString,
             icon: item.icon,
         };
     });
 };
+
 
 export const apps: AppTool[] = createAppToolList(appsData);
 export const tools: AppTool[] = createAppToolList(toolsData);
