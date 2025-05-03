@@ -22,7 +22,7 @@ export const initialApps: AppTool[] = [
 // Initial Tools Data (Will be used if localStorage is empty/invalid)
 export const initialTools: AppTool[] = [
     { name: "AI Studio", description: "Google's AI development environment.", url: "https://aistudio.google.com/", icon: "Sparkles" },
-    { name: "AppsGeyser Next", description: "Platform for creating Android apps.", url: "https://next.appsgeyser.com", icon: "AppWindow" },
+    { name: "AppsGeyser Next", description: "Platform for creating Android apps.", url: "https://appsgeyser.com/", icon: "AppWindow" }, // Updated URL
     { name: "CopyCoder AI", description: "AI tool for code generation or assistance.", url: "https://copycoder.ai", icon: "Copy" },
     { name: "Dribbble", description: "Showcase platform for designers.", url: "https://dribbble.com", icon: "Dribbble" },
     { name: "ElevenLabs", description: "AI voice generation tool.", url: "https://elevenlabs.io", icon: "Voicemail" },
@@ -31,7 +31,7 @@ export const initialTools: AppTool[] = [
     { name: "GitHub", description: "Platform for code hosting and collaboration.", url: "https://github.com", icon: "Github" },
     { name: "Hedra", description: "Platform for creative AI tools.", url: "https://www.hedra.com", icon: "Video" },
     { name: "Mureka AI", description: "An AI-focused platform or tool.", url: "https://www.mureka.ai", icon: "BrainCircuit" },
-    { name: "Netlify", description: "Platform for web hosting and automation.", url: "https://app.netlify.com", icon: "Cloud" },
+    { name: "Netlify", description: "Platform for web hosting and automation.", url: "https://www.netlify.com/", icon: "Cloud" }, // Updated URL
     { name: "Suno AI", description: "AI music generation tool.", url: "https://suno.com", icon: "Music" },
     { name: "Unsplash", description: "Source for royalty-free images.", url: "https://unsplash.com", icon: "Image" },
 ];
