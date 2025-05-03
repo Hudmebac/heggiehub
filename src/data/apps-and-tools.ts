@@ -1,8 +1,11 @@
 
+import type React from 'react';
+
 export interface AppTool {
   name: string;
-  description: string; // Consider enhancing this later if needed
+  description: string;
   url: string;
+  icon?: string | React.ReactNode; // Can be a lucide icon name (string) or an SVG ReactNode
 }
 
 // Function to extract a plausible name from a URL
@@ -10,43 +13,33 @@ const extractNameFromUrl = (url: string): string => {
   try {
     const parsedUrl = new URL(url);
     let hostname = parsedUrl.hostname.replace(/^www\./, ''); // Remove www.
-    hostname = hostname.split('.')[0]; // Get the main part (e.g., 'airfry' from 'airfry.netlify.app')
+    hostname = hostname.split('.')[0]; // Get the main part
 
-    // Handle specific known cases or patterns
-    if (hostname === 'netlify' && parsedUrl.pathname.includes('app')) {
-        hostname = "Netlify App"; // More specific for app.netlify.com
-    } else if (hostname === 'netlify') {
-        const subdomain = parsedUrl.hostname.split('.')[0];
-        if (subdomain && subdomain !== 'www') {
-            hostname = subdomain; // Use subdomain for netlify sites like airfry.netlify.app
-        }
-    } else if (parsedUrl.pathname === '/happybirthday.html') {
-      return 'Happy Birthday'; // Special case
-    } else if (hostname === 'github') {
-       return 'GitHub';
-    } else if (hostname === 'mureka') {
-        return 'Mureka AI';
-    } else if (hostname === 'suno') {
-        return 'Suno AI';
-    } else if (hostname === 'appsgeyser') {
-        return 'AppsGeyser Next';
-    } else if (hostname === 'copycoder') {
-        return 'CopyCoder AI';
-    } else if (hostname === 'dribbble') {
-        return 'Dribbble';
-    } else if (hostname === 'elevenlabs') {
-        return 'ElevenLabs';
-    } else if (hostname === 'hedra') {
-        return 'Hedra';
-    } else if (hostname === 'unsplash') {
-        return 'Unsplash'; // Keep it simple
-    }
+    // Specific overrides based on hostname or path
+    if (hostname === 'netlify' && parsedUrl.pathname.includes('app')) return "Netlify App";
+    if (parsedUrl.hostname === 'airfry.netlify.app') return 'Air Fry';
+    if (parsedUrl.hostname === 'emberglow.netlify.app' && parsedUrl.pathname === '/happybirthday.html') return 'Happy Birthday';
+    if (parsedUrl.hostname === 'emberglow.netlify.app') return 'Ember Glow';
+    if (parsedUrl.hostname === 'zenzac.netlify.app') return 'Zenzac';
+    if (parsedUrl.hostname === 'skyzer.netlify.app') return 'Skyzer';
+    if (parsedUrl.hostname === 'debbieheggiespring.netlify.app') return 'Debbie Heggie Spring';
+    if (hostname === 'github') return 'GitHub';
+    if (hostname === 'mureka') return 'Mureka AI';
+    if (hostname === 'suno') return 'Suno AI';
+    if (hostname === 'appsgeyser') return 'AppsGeyser Next';
+    if (hostname === 'copycoder') return 'CopyCoder AI';
+    if (hostname === 'dribbble') return 'Dribbble';
+    if (hostname === 'elevenlabs') return 'ElevenLabs';
+    if (hostname === 'hedra') return 'Hedra';
+    if (hostname === 'unsplash') return 'Unsplash';
+    if (hostname === 'gencraft') return 'GenCraft';
 
 
-    // Capitalize first letter and handle potential hyphens/camelCase
+    // General case: Capitalize first letter and handle hyphens/camelCase
     return hostname
       .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
       .replace(/[-_]/g, ' ') // Replace hyphens/underscores with space
+      .trim() // Remove leading/trailing spaces
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
@@ -56,35 +49,30 @@ const extractNameFromUrl = (url: string): string => {
   }
 };
 
-// Helper function to create AppTool objects
-const createAppTool = (url: string, index?: number): AppTool => {
-    let name = extractNameFromUrl(url);
-    // Handle duplicate names like Unsplash
-    if (name === 'Unsplash' && index !== undefined && index > 0) {
-        name = `Unsplash (${index + 1})`;
-    }
-     if (name === 'Debbieheggiespring') {
-        name = "Debbie Heggie Spring"; // Correct specific name
-    }
+// Helper function to create AppTool objects for Apps
+const createApp = (url: string, icon?: string | React.ReactNode): AppTool => {
+    const name = extractNameFromUrl(url);
     return {
         name: name,
-        description: `Explore ${name}`,
+        description: `Visit ${name}`, // AI will enhance this later
         url: url,
+        icon: icon,
     };
 };
 
-
+// Define apps with icons
 export const apps: AppTool[] = [
-  "https://airfry.netlify.app/",
-  "https://emberglow.netlify.app/",
-  "https://zenzac.netlify.app/",
-  "https://skyzer.netlify.app/",
-  "https://debbieheggiespring.netlify.app/",
-  "https://emberglow.netlify.app/happybirthday.html"
-].map(url => createAppTool(url));
+  createApp("https://airfry.netlify.app/", "ChefHat"),
+  createApp("https://emberglow.netlify.app/", "Flame"),
+  createApp("https://zenzac.netlify.app/", "Wind"),
+  createApp("https://skyzer.netlify.app/", "CloudSun"),
+  createApp("https://debbieheggiespring.netlify.app/", "Flower"),
+  createApp("https://emberglow.netlify.app/happybirthday.html", "Cake")
+];
 
 
-export const tools: AppTool[] = [
+// Define tools URLs
+const toolsDataUrls = [
     "https://gencraft.com",
     "https://unsplash.com",
     "https://unsplash.com", // Second Unsplash
@@ -97,4 +85,26 @@ export const tools: AppTool[] = [
     "https://dribbble.com",
     "https://elevenlabs.io",
     "https://www.hedra.com"
-].map((url, index) => createAppTool(url, index)); // Pass index for duplicate handling
+];
+
+// Process tools data to handle duplicates
+const nameCounts: { [key: string]: number } = {};
+export const tools: AppTool[] = toolsDataUrls.map((url): AppTool => {
+    let name = extractNameFromUrl(url);
+    const baseName = name; // Keep original extracted name for counting
+
+    // Increment count for this base name
+    nameCounts[baseName] = (nameCounts[baseName] || 0) + 1;
+
+    // If this is a duplicate (count > 1), append the count
+    if (nameCounts[baseName] > 1) {
+        name = `${baseName} (${nameCounts[baseName]})`;
+    }
+
+    return {
+        name: name,
+        description: `Explore ${name}`, // Keep initial description simple
+        url: url,
+        // Tools use thumbnails, no icon needed here initially
+    };
+});
