@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -19,6 +20,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Remove experimental layout prop configuration if it exists,
+  // as 'fill' is now the recommended approach and doesn't need explicit enabling.
+  // experimental: {
+  //   images: {
+  //     layoutRaw: true, // Remove this line if present
+  //   },
+  // },
 };
 
 export default nextConfig;

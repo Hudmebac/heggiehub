@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { enhanceBio, type EnhanceBioOutput } from '@/ai/flows/enhance-bio';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { appsAndTools, type AppTool } from '@/data/apps-and-tools';
+import { apps, tools, type AppTool } from '@/data/apps-and-tools'; // Import new arrays
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -58,6 +59,47 @@ export default function Home() {
     },
   };
 
+  // Helper function to render a section
+  const renderSection = (title: string, items: AppTool[]) => (
+    <section>
+      <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">{title}</h2>
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {items.map((item, index) => (
+          <motion.div key={`${title}-${index}-${item.name}`} variants={itemVariants}>
+            <Card className="h-full flex flex-col overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card border border-border rounded-lg">
+              <CardHeader>
+                <CardTitle className="text-xl uppercase tracking-wide">{item.name}</CardTitle>
+                <CardDescription className="text-sm min-h-[40px]">{item.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow flex flex-col justify-between">
+                <div className="mb-4 relative aspect-video rounded overflow-hidden">
+                  <Image
+                    src={`https://picsum.photos/seed/${item.name.replace(/\s+/g, '-')}-${index}/400/225`} // Ensure unique seeds
+                    alt={`${item.name} screenshot`}
+                    fill // Changed layout to fill
+                    style={{ objectFit: "cover" }} // Added objectFit
+                    data-ai-hint={item.name} // Hint for image generation
+                    priority={index < 3} // Prioritize loading images for the first few cards
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" // Add sizes attribute
+                  />
+                </div>
+                <Button asChild className="w-full mt-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Link href={item.url} target="_blank" rel="noopener noreferrer">
+                    Visit {title === 'Apps' ? 'App' : 'Tool'}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
+    </section>
+  );
 
   return (
     <div className="space-y-12">
@@ -90,45 +132,12 @@ export default function Home() {
         </motion.div>
       </motion.section>
 
-      {/* Apps and Tools Showcase */}
-      <section>
-        <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">Apps & Tools</h2>
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-         >
-          {appsAndTools.map((item, index) => (
-            <motion.div key={index} variants={itemVariants}>
-              <Card className="h-full flex flex-col overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card border border-border rounded-lg">
-                <CardHeader>
-                  <CardTitle className="text-xl uppercase tracking-wide">{item.name}</CardTitle>
-                   {/* Placeholder for description - could be enhanced later */}
-                  <CardDescription className="text-sm min-h-[40px]">Explore {item.name}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow flex flex-col justify-between">
-                   {/* Placeholder Image */}
-                  <div className="mb-4 relative aspect-video rounded overflow-hidden">
-                     <Image
-                       src={`https://picsum.photos/seed/${item.name.replace(/\s+/g, '-')}/400/225`}
-                       alt={`${item.name} screenshot`}
-                       layout="fill"
-                       objectFit="cover"
-                       data-ai-hint={item.name} // Hint for image generation
-                     />
-                  </div>
-                  <Button asChild className="w-full mt-auto bg-primary hover:bg-primary/90 text-primary-foreground">
-                    <Link href={item.url} target="_blank" rel="noopener noreferrer">
-                      Visit App
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
+      {/* Apps Section */}
+      {renderSection("Apps", apps)}
+
+      {/* Tools Section */}
+      {renderSection("Tools", tools)}
+
     </div>
   );
 }
