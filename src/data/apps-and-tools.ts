@@ -13,9 +13,13 @@ const extractNameFromUrl = (url: string): string => {
   try {
     const parsedUrl = new URL(url);
     let hostname = parsedUrl.hostname.replace(/^www\./, ''); // Remove www.
-    hostname = hostname.split('.')[0]; // Get the main part
+    // Handle multi-level subdomains like studio.firebase.google.com
+    const parts = hostname.split('.');
+    hostname = parts.length > 2 ? parts[0] : hostname.split('.')[0]; // Get the main part or the first subdomain
 
     // Specific overrides based on hostname or path
+    if (parsedUrl.hostname === 'studio.firebase.google.com') return 'Firebase Studio';
+    if (parsedUrl.hostname === 'aistudio.google.com') return 'AI Studio';
     if (hostname === 'netlify' && parsedUrl.pathname.includes('app')) return "Netlify"; // Simplified Netlify name
     if (parsedUrl.hostname === 'airfry.netlify.app') return 'Air Fry';
     if (parsedUrl.hostname === 'emberglow.netlify.app' && parsedUrl.pathname === '/happybirthday.html') return 'Happy Birthday';
@@ -73,7 +77,6 @@ const appsData: { url: string, icon?: string | React.ReactNode }[] = [
 const toolsData: { url: string, icon?: string | React.ReactNode }[] = [
     { url: "https://gencraft.com", icon: "Wand2" },
     { url: "https://unsplash.com", icon: "Image" },
-    // Removed duplicate Unsplash entry
     { url: "https://www.mureka.ai", icon: "BrainCircuit" },
     { url: "https://suno.com", icon: "Music" },
     { url: "https://github.com", icon: "Github" },
@@ -82,7 +85,9 @@ const toolsData: { url: string, icon?: string | React.ReactNode }[] = [
     { url: "https://copycoder.ai", icon: "Copy" },
     { url: "https://dribbble.com", icon: "Dribbble" },
     { url: "https://elevenlabs.io", icon: "Voicemail" },
-    { url: "https://www.hedra.com", icon: "Video" }
+    { url: "https://www.hedra.com", icon: "Video" },
+    { url: "https://studio.firebase.google.com/", icon: "LayoutGrid" }, // Added Firebase Studio
+    { url: "https://aistudio.google.com/", icon: "Sparkles" } // Added AI Studio
 ];
 
 // Helper function to create AppTool objects, handling duplicate names
@@ -104,7 +109,7 @@ const createAppToolList = (data: { url: string, icon?: string | React.ReactNode 
         nameCounts[baseName] = (nameCounts[baseName] || 0) + 1;
 
         // If this is a duplicate (count > 1), append the count
-        if (nameCounts[baseName] > 1) {
+        if (nameCounts[baseName] > 1 && baseName !== 'Firebase Studio' && baseName !== 'AI Studio') { // Avoid numbering the new studios if name collision somehow happens
             name = `${baseName} (${nameCounts[baseName]})`;
         }
 
