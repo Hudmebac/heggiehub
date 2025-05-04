@@ -116,7 +116,7 @@ export default function Home() {
            {type === 'app' && item.info && (
             <Dialog>
               <DialogTrigger asChild>
-                 <Button variant="ghost" size="icon" className="absolute top-0 right-0 mt-[-8px] mr-[-8px] text-muted-foreground hover:text-primary">
+                 <Button variant="ghost" size="icon" className="absolute top-0 right-0 mt-[-8px] mr-[-8px] text-orange-muted">
                   <Info className="h-5 w-5" />
                   <span className="sr-only">More info about {item.name}</span>
                 </Button>
