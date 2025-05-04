@@ -115,10 +115,9 @@ export default function Home() {
             {/* Info Dialog Trigger - Only for Apps with info */}
            {type === 'app' && item.info && (
             <Dialog>
-              <DialogTrigger asChild>
-                 <Button variant="ghost" size="icon" className="absolute top-0 right-0 mt-[-8px] mr-[-8px] text-orange-muted">
-                  <Info className="h-5 w-5" />
-                  <span className="sr-only">More info about {item.name}</span>
+              <DialogTrigger asChild> 
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                    More Info
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -213,9 +212,9 @@ export default function Home() {
          className="mb-4 text-4xl font-extrabold tracking-tight uppercase sm:text-5xl md:text-6xl"
         >
           Welcome to HeggieHub
-        </motion.h1>
+ </motion.h1>
         <motion.div variants={itemVariants} className="max-w-3xl mx-auto">
-           <p className="text-lg sm:text-xl md:text-2xl text-foreground/80 mb-6"> {/* Added margin-bottom */}
+           <p className="text-base sm:text-lg md:text-xl text-foreground/80 mb-6"> {/* Adjusted text size and added margin-bottom */}
               {staticBio}
             </p>
         </motion.div>
