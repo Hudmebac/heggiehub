@@ -107,53 +107,51 @@ export default function Home() {
   const renderCard = (item: AppTool, index: number, type: 'app' | 'tool') => (
     <motion.div key={`${type}-${index}-${item.name}`} variants={itemVariants}>
       <Card className="h-full flex flex-col overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-card border border-border rounded-lg p-4 text-center items-center">
-        <div className="mb-4">
-          {renderIcon(item.icon)} {/* Render icon */}
-        </div>
-        <CardHeader className="p-2 w-full relative"> {/* Added relative positioning */}
-          <CardTitle className="text-lg sm:text-xl uppercase tracking-wide">{item.name}</CardTitle>
-            {/* Info Dialog Trigger - Only for Apps with info */}
-           {type === 'app' && item.info && (
-            <Dialog>
-              <DialogTrigger asChild> 
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                    More Info
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{item.name} - More Info</DialogTitle>
-                   {/* Manual Close Button */}
-                   <DialogClose asChild>
-                      <Button variant="ghost" size="icon" className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                          <X className="h-4 w-4" />
-                          <span className="sr-only">Close</span>
-                      </Button>
-                    </DialogClose>
-                </DialogHeader>
-                 <DialogDescription className="text-left whitespace-pre-wrap pt-4 text-sm text-foreground/80"> {/* Adjusted styling */}
-                    {item.info}
-                  </DialogDescription>
-                 {/* Removed footer close button */}
-              </DialogContent>
-            </Dialog>
-          )}
-        </CardHeader>
-        <CardContent className="flex-grow flex flex-col justify-between w-full p-2">
+            <div className="mb-4">
+                {renderIcon(item.icon)} {/* Render icon */}
+            </div>
+            <CardHeader className="p-2 w-full">
+                <CardTitle className="text-lg sm:text-xl uppercase tracking-wide">{item.name}</CardTitle>
+            </CardHeader>
+        <CardContent className="w-full p-2">
           <div className="min-h-[60px] mb-4"> {/* Consistent min height for description */}
+            {/* More Info Button */}
+            {type === 'app' && item.info && (
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">More Info</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>{item.name} - More Info</DialogTitle>
+                            {/* Manual Close Button */}
+                            <DialogClose asChild>
+                                <Button variant="ghost" size="icon" className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                                    <X className="h-4 w-4" />
+                                    <span className="sr-only">Close</span>
+                                </Button>
+                            </DialogClose>
+                        </DialogHeader>
+                        <DialogDescription className="text-left whitespace-pre-wrap pt-4 text-sm text-foreground/80">
+                            {item.info}
+                        </DialogDescription>
+                        {/* Removed footer close button */}
+                    </DialogContent>
+                </Dialog>
+            )}
             <p className="text-sm text-foreground/80">{item.description}</p>
-          </div>
-          <Button asChild className="w-full mt-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+        </div>
+        <Button asChild className="w-full mt-auto bg-primary hover:bg-primary/90 text-primary-foreground">
             <Link href={item.url} target="_blank" rel="noopener noreferrer">
-              Visit {type === 'app' ? 'App' : 'Tool'}
+                Visit {type === 'app' ? 'App' : 'Tool'}
             </Link>
-          </Button>
-        </CardContent>
-      </Card>
+        </Button>
+    </CardContent>
+  </Card>
     </motion.div>
   );
 
- const renderSection = (title: string, items: AppTool[], type: 'app' | 'tool') => (
+  const renderSection = (title: string, items: AppTool[], type: 'app' | 'tool') => (
     <section>
         <h2 className="text-3xl font-bold mb-8 text-center uppercase tracking-wider">{title}</h2>
         {isLoadingData ? (
@@ -216,7 +214,7 @@ export default function Home() {
         <motion.div variants={itemVariants} className="max-w-3xl mx-auto">
            <p className="text-base sm:text-lg md:text-xl text-foreground/80 mb-6"> {/* Adjusted text size and added margin-bottom */}
               {staticBio}
-            </p>
+            </p>  
         </motion.div>
          {/* Disclaimer Section */}
          <motion.div
@@ -229,10 +227,10 @@ export default function Home() {
             </p>
           </motion.div>
       </motion.section>
-
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" >
        {/* Apps Section */}
        {renderSection("Apps", apps, 'app')}
-
+        </motion.div>
 
        {/* Tools Section */}
        {renderSection("Tools", tools, 'tool')}
